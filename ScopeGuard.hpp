@@ -1,3 +1,5 @@
+#ifndef TOM_COMMONLIB_SCOPE_GUARD
+#define TOM_COMMONLIB_SCOPE_GUARD
 #include <functional>
 #define SCOPEGUARD_LINENAME_CAT(name, line) name##line
 #define SCOPEGUARD_LINENAME(name, line) SCOPEGUARD_LINENAME_CAT(name, line)
@@ -31,3 +33,4 @@ private:
 	ScopeGuard(ScopeGuard const &);
 	ScopeGuard &operator=(ScopeGuard const &);
 };
+#endif
