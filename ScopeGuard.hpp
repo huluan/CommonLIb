@@ -1,5 +1,5 @@
-#ifndef TOM_COMMONLIB_SCOPE_GUARD
-#define TOM_COMMONLIB_SCOPE_GUARD
+#ifndef TOM_COMMONLIB_SCOPE_GUARD_H_
+#define TOM_COMMONLIB_SCOPE_GUARD_H_
 #include <functional>
 #define SCOPEGUARD_LINENAME_CAT(name, line) name##line
 #define SCOPEGUARD_LINENAME(name, line) SCOPEGUARD_LINENAME_CAT(name, line)
