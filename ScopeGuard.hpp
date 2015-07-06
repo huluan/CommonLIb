@@ -7,6 +7,8 @@
 // 因为有可能一个scope里面有好几个资源，所以我们使用EXIT加行号的方法来命名
 #define ON_SCOPE_EXIT(callback) ScopeGuard SCOPEGUARD_LINENAME(EXIT, __LINE__)(callback)
 
+namespace TomCommLib
+{
 class ScopeGuard
 {
 public:
@@ -33,4 +35,5 @@ private:
 	ScopeGuard(ScopeGuard const &);
 	ScopeGuard &operator=(ScopeGuard const &);
 };
+}
 #endif
