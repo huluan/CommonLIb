@@ -7,6 +7,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <memory>
 
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
@@ -43,6 +44,12 @@ void ThreadSafetySetup();
 // 多线程保护反初始化
 void ThreadSafetyCleanup();
 
+enum EKeyMode
+{
+    KeyModeFromStr  = 0,        // 字符串
+    KeyModeFromFile = 1,        // 文件
+};
+
 class RsaEncryptor
 {
 public:
@@ -58,28 +65,24 @@ public:
         RetEncryptError = 7,                // 加密错误
         RetDecryptError = 8,                // 解密错误
         RetNoInit = 9,                      // 没有初始化
+        RetAlreadyInit = 10,                // 已经初始化
     };
 
-    enum EKeyMode
-    {
-        KeyModeFromStr  = 0,        // 字符串
-        KeyModeFromFile = 1,        // 文件
-    };
 public:
-    // 使用加密和解密
-    RsaEncryptor(const std::string &publicKeyFile, const std::string &privateKeyFile,
-            const std::string &password);
+    RsaEncryptor() :
+        m_isInit(false),
+        m_isUseEncrypt(false),
+        m_isUseDecrypt(false),
+        m_rsaErrorNo(0),
+        m_rsaPublic(nullptr),
+        m_rsaPrivate(nullptr){}
 
-    // 仅使用加密
-    RsaEncryptor(const std::string &publicKey, const EKeyMode &mode = KeyModeFromFile);
+    EResultInfo SetPublicKeyFromFile(const std::string &publicKeyFile);
+    EResultInfo SetPublicKeyFromStr(const std::string &publicKeyStr);
 
-    // 仅使用解密
-    RsaEncryptor(const std::string &privateKeyFile, const std::string &password);
+    EResultInfo SetPrivateKeyFromFile(const std::string &privateKeyFile, std::string &password = "");
 
-    EResultInfo Decrypt(const std::vector<unsigned char> &inData, const unsigned int inDataLen, 
-           std::vector<unsigned char> &outData, unsigned int &outDataLen);
-    EResultInfo Encrypt(const std::vector<unsigned char> &inData, const unsigned int inDataLen, 
-           std::vector<unsigned char> &outData, unsigned int &outDataLen);
+    EResultInfo SetPrivateKeyFromStr(const std::string &privateKeyFile);
 
     EResultInfo Decrypt(const unsigned char *inData, const unsigned int inDataLen, 
            unsigned char *outData, unsigned int &outDataLen);
@@ -115,12 +118,9 @@ private:
     bool m_isInit;
     bool m_isUseEncrypt;
     bool m_isUseDecrypt;
-    std::string m_publicKeyFileName;
-    std::string m_privateKeyFileName;
-    std::string m_password;
-    std::string m_publicKeyStr;
-    RSA *m_rsaPublic;
-    RSA *m_rsaPrivate;
+    using RSAPtr =  std::shared_ptr<RSA>;
+    RSAPtr m_rsaPublic;
+    RSAPtr m_rsaPrivate;
     unsigned long m_rsaErrorNo;
 };
 }

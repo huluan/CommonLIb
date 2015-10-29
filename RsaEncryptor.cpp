@@ -38,7 +38,7 @@ void SOpenssl::ThreadSafetySetup()
     for (int i = 0; i < CRYPTO_num_locks(); ++i)
     {
         lockCount[i] = 0;
-        pthread_mutex_init(&(lockCs[i]), NULL);
+        pthread_mutex_init(&(lockCs[i]), nullptr);
     }
 
     CRYPTO_set_id_callback(EcosThreadIdCallback);
@@ -48,8 +48,8 @@ void SOpenssl::ThreadSafetySetup()
 // 多线程保护反初始化
 void SOpenssl::ThreadSafetyCleanup()
 {
-    CRYPTO_set_id_callback(NULL);
-    CRYPTO_set_locking_callback(NULL);
+    CRYPTO_set_id_callback(nullptr);
+    CRYPTO_set_locking_callback(nullptr);
 
     for (int i = 0; i < CRYPTO_num_locks(); ++i)
     {
@@ -57,62 +57,9 @@ void SOpenssl::ThreadSafetyCleanup()
     }
     
     OPENSSL_free(lockCs);
-    lockCs = NULL;
+    lockCs = nullptr;
     OPENSSL_free(lockCount);
-    lockCount = NULL;
-}
-
-RsaEncryptor::RsaEncryptor(const std::string &publicKeyFileName, const std::string &privateKeyFileName,
-            const std::string &password) : m_rsaPublic(NULL), m_rsaPrivate(NULL),
-    m_publicKeyFileName(publicKeyFileName),
-    m_privateKeyFileName(privateKeyFileName),
-    m_password(password),
-    m_isInit(false),
-    m_isUseEncrypt(true),
-    m_isUseDecrypt(true),
-    m_rsaErrorNo(0),
-    m_publicKeyStr("")
-{
-
-}
-
-// Only Encrypt
-RsaEncryptor::RsaEncryptor(const std::string &publicKey, const EKeyMode &mode) : 
-    m_publicKeyFileName(""),
-    m_isUseEncrypt(true),
-    m_isUseDecrypt(false),
-    m_isInit(false),
-    m_privateKeyFileName(""),
-    m_password(""),
-    m_rsaPublic(NULL),
-    m_rsaPrivate(NULL),
-    m_rsaErrorNo(0),
-    m_publicKeyStr("")
-{
-    if (mode == KeyModeFromStr)
-    {
-       m_publicKeyStr = publicKey; 
-    }
-    else if(mode == KeyModeFromFile)
-    {
-        m_publicKeyFileName = publicKey;
-    }
-}
-
-// Only Decrypt
-RsaEncryptor::RsaEncryptor(const std::string &privateKeyFile, const std::string &password) : 
-    m_publicKeyFileName(""),
-    m_isUseDecrypt(true),
-    m_isUseEncrypt(false),
-    m_isInit(false),
-    m_privateKeyFileName(privateKeyFile),
-    m_password(password),
-    m_rsaPublic(NULL),
-    m_rsaPrivate(NULL),
-    m_rsaErrorNo(0),
-    m_publicKeyStr("")
-{
-
+    lockCount = nullptr;
 }
 
 RsaEncryptor::EResultInfo RsaEncryptor::Init()
@@ -152,27 +99,61 @@ RsaEncryptor::EResultInfo RsaEncryptor::Init()
     return result;
 }
 
-RsaEncryptor::EResultInfo RsaEncryptor::GetRsaPublic()
+RsaEncryptor::EResultInfo RsaEncryptor::SetPublicKeyFromFile(const std::string &publicKeyFile)
 {
     EResultInfo result = RetSuccess;
-    FILE *keyFile = NULL;
-    do
+    std::shared_ptr<FILE> keyfile;
+    do 
     {
-        if ((keyFile = fopen(m_publicKeyFileName.c_str(), "rb")) == NULL)
+        if (true == m_isUseEncrypt)
+        {
+            result = RetAlreadyInit;
+            break;
+        }
+
+        keyFile.reset(fopen(publicKeyFile.c_str(), "rb"), [](FILE *file){
+                if (nullptr != file) fclose(file);});
+        if (keyFile.get() == nullptr)
         {
             result = RetCantOpenPublicFile;
             break;
         }
 
         m_rsaPublic = RSA_new();
-        if (PEM_read_RSA_PUBKEY(keyFile , &m_rsaPublic, 0, 0) == NULL)
+
+        if (PEM_read_RSA_PUBKEY(keyFile.get(), &m_rsaPublic, 0, 0) == nullptr)
+        {
+            result = RetCantReadPublicKey;
+            break;
+        }
+    } while (false);
+
+    if (result == RetSuccess)
+        m_isUseEncrypt = true;
+    return result;
+}
+
+RsaEncryptor::EResultInfo RsaEncryptor::GetRsaPublic()
+{
+    EResultInfo result = RetSuccess;
+    FILE *keyFile = nullptr;
+    do
+    {
+        if ((keyFile = fopen(m_publicKeyFileName.c_str(), "rb")) == nullptr)
+        {
+            result = RetCantOpenPublicFile;
+            break;
+        }
+
+        m_rsaPublic = RSA_new();
+        if (PEM_read_RSA_PUBKEY(keyFile , &m_rsaPublic, 0, 0) == nullptr)
         {
             result = RetCantReadPublicKey;
             break;
         }
     } while(false);
 
-    if (NULL != keyFile)
+    if (nullptr != keyFile)
     {
        fclose(keyFile); 
     }
@@ -182,27 +163,27 @@ RsaEncryptor::EResultInfo RsaEncryptor::GetRsaPublic()
 RsaEncryptor::EResultInfo RsaEncryptor::GetRsaPrivate()
 {
     EResultInfo result = RetSuccess;
-    BIO *bio = NULL;
+    BIO *bio = nullptr;
     do
     {
         m_rsaPrivate = RSA_new();
         OpenSSL_add_all_algorithms(); // 一定要调用EVP_cleanup(), 不然内存泄漏;
         bio = BIO_new_file(m_privateKeyFileName.c_str(), "rb");
-        if (NULL == bio)
+        if (nullptr == bio)
         {
             result = RetCantOpenPrivateFile;
             break;
         }
         
-        m_rsaPrivate = PEM_read_bio_RSAPrivateKey(bio, NULL, NULL, (void *)m_password.c_str());
-        if (NULL == m_rsaPrivate)
+        m_rsaPrivate = PEM_read_bio_RSAPrivateKey(bio, nullptr, nullptr, (void *)m_password.c_str());
+        if (nullptr == m_rsaPrivate)
         {
             result = RetCantReadPrivateKey;
             break;
         }
     } while(false);
 
-    if (NULL != bio)
+    if (nullptr != bio)
     {
         BIO_free(bio);
     }
@@ -211,8 +192,8 @@ RsaEncryptor::EResultInfo RsaEncryptor::GetRsaPrivate()
 
 void RsaEncryptor::Destory()
 {
-    if (m_rsaPublic != NULL) RSA_free(m_rsaPublic);
-    if (m_rsaPrivate != NULL) RSA_free(m_rsaPrivate);
+    if (m_rsaPublic != nullptr) RSA_free(m_rsaPublic);
+    if (m_rsaPrivate != nullptr) RSA_free(m_rsaPrivate);
     CRYPTO_cleanup_all_ex_data();
     EVP_cleanup();
 }
@@ -300,7 +281,7 @@ std::string RsaEncryptor::GetEncrytOrDecryptInfo() const
 RsaEncryptor::EResultInfo RsaEncryptor::GetRsaPublic(std::string &PublicKey)
 {
     EResultInfo result = RetSuccess;
-    BIO *bio = NULL;
+    BIO *bio = nullptr;
     for (int i = 64; i < PublicKey.size(); i+=64)
     {
         if (PublicKey[i] != '\n')
@@ -314,8 +295,8 @@ RsaEncryptor::EResultInfo RsaEncryptor::GetRsaPublic(std::string &PublicKey)
     do
     {
         bio = BIO_new_mem_buf((void *)PublicKey.data(), PublicKey.length() + 1);
-        m_rsaPublic = PEM_read_bio_RSA_PUBKEY(bio, NULL, 0, NULL);
-        if (NULL == m_rsaPublic )
+        m_rsaPublic = PEM_read_bio_RSA_PUBKEY(bio, nullptr, 0, nullptr);
+        if (nullptr == m_rsaPublic )
         {
             result = RetCantReadPublicKey;
             break;
