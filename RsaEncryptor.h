@@ -44,12 +44,6 @@ void ThreadSafetySetup();
 // 多线程保护反初始化
 void ThreadSafetyCleanup();
 
-enum EKeyMode
-{
-    KeyModeFromStr  = 0,        // 字符串
-    KeyModeFromFile = 1,        // 文件
-};
-
 class RsaEncryptor
 {
 public:
@@ -80,8 +74,7 @@ public:
     EResultInfo SetPublicKeyFromFile(const std::string &publicKeyFile);
     EResultInfo SetPublicKeyFromStr(const std::string &publicKeyStr);
 
-    EResultInfo SetPrivateKeyFromFile(const std::string &privateKeyFile, std::string &password = "");
-
+    EResultInfo SetPrivateKeyFromFile(const std::string &privateKeyFile,std::string &password = "");
     EResultInfo SetPrivateKeyFromStr(const std::string &privateKeyFile);
 
     EResultInfo Decrypt(const unsigned char *inData, const unsigned int inDataLen, 
@@ -111,10 +104,6 @@ public:
     ~RsaEncryptor();
 
 private:
-    EResultInfo GetRsaPublic();
-    EResultInfo GetRsaPublic(std::string &PublicKey);
-    EResultInfo GetRsaPrivate();
-
     bool m_isInit;
     bool m_isUseEncrypt;
     bool m_isUseDecrypt;
