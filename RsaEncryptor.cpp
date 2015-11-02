@@ -90,7 +90,7 @@ RsaEncryptor::EResultInfo RsaEncryptor::SetPublicKeyFromFile(const std::string &
             break;
         }
 
-        bio.reset(BIO_new_file(publicKeyFile.c_str(), "rb"), BIODeleter);
+        bio.reset(BIO_new_file(publicKeyFile.c_str(), "r"), BIODeleter);
         if (bio.get() == nullptr)
         {
             result = RetCantOpenPublicFile;
@@ -111,7 +111,7 @@ RsaEncryptor::EResultInfo RsaEncryptor::SetPublicKeyFromFile(const std::string &
     return result;
 }
 
-RsaEncryptor::EResultInfo RsaEncryptor::SetPublicKeyFromStr(const std::string &publicKeyStr)
+RsaEncryptor::EResultInfo RsaEncryptor::SetPublicKeyFromStr(std::string &publicKeyStr)
 {
     auto result = RetSuccess;
     std::shared_ptr<BIO> bio;
@@ -122,15 +122,15 @@ RsaEncryptor::EResultInfo RsaEncryptor::SetPublicKeyFromStr(const std::string &p
             result = RetAlreadyInit;
             break;
         }
-        for (std::string::size_type i = 64; i < PublicKey.size(); i+=64)
+        for (std::string::size_type i = 64; i < publicKeyStr.size(); i+=64)
         {
-            if (PublicKey[i] != '\n')
-                PublicKey.insert(i, "\n");
+            if (publicKeyStr[i] != '\n')
+                publicKeyStr.insert(i, "\n");
             ++i;
         }
-        PublicKey.insert(0, "-----BEGIN PUBLIC KEY-----\n");
-        PublicKey.append("\n-----END PUBLIC KEY-----\n");
-        bio.reset(BIO_new_mem_buf((void *)PublicKey.data(), PublicKey.length() + 1),
+        publicKeyStr.insert(0, "-----BEGIN PUBLIC KEY-----\n");
+        publicKeyStr.append("\n-----END PUBLIC KEY-----\n");
+        bio.reset(BIO_new_mem_buf((void *)publicKeyStr.data(), publicKeyStr.length() + 1),
                 BIODeleter);
         if (bio.get() == nullptr)
         {
@@ -153,7 +153,7 @@ RsaEncryptor::EResultInfo RsaEncryptor::SetPublicKeyFromStr(const std::string &p
 }
 
 RsaEncryptor::EResultInfo RsaEncryptor::SetPrivateKeyFromFile(const std::string &privateKeyFile, 
-        std::string &password)
+        std::string password)
 {
     auto result = RetSuccess;
     std::shared_ptr<BIO> bio;
@@ -181,7 +181,7 @@ RsaEncryptor::EResultInfo RsaEncryptor::SetPrivateKeyFromFile(const std::string 
                     nullptr, nullptr, nullptr), RSADeleter);
         else
             m_rsaPrivate.reset(PEM_read_bio_RSAPrivateKey(bio.get(),
-                    nullptr, nullptr, static_cast<void *>(password.c_str())),
+                    nullptr, nullptr, const_cast<char *>(password.c_str())),
                     RSADeleter);
         if (nullptr == m_rsaPrivate)
         {
@@ -217,14 +217,14 @@ RsaEncryptor::EResultInfo RsaEncryptor::Decrypt(const unsigned char *inData, con
             result = RetNoInit;
             break;
         }
-        if (outDataLen < RSA_size(m_rsaPrivate))
+        if (outDataLen < RSA_size(m_rsaPrivate.get()))
         {
             result = RetBuffSizeLess;
             break;
         }
         // 加密
         int ret = RSA_private_decrypt(inDataLen, inData, outData,
-                m_rsaPrivate, RSA_PKCS1_PADDING);
+                m_rsaPrivate.get(), RSA_PKCS1_PADDING);
         if (ret == -1)
         {
             result = RetDecryptError;
@@ -252,14 +252,14 @@ RsaEncryptor::EResultInfo RsaEncryptor::Encrypt(const unsigned char *inData, con
             result = RetNoInit;
             break;
         }
-        if (outDataLen < RSA_size(m_rsaPublic))
+        if (outDataLen < RSA_size(m_rsaPublic.get()))
         {
             result = RetBuffSizeLess;
             break;
         }
         // 加密
         int ret = RSA_public_encrypt(inDataLen, inData, outData,
-                m_rsaPublic, RSA_PKCS1_PADDING);
+                m_rsaPublic.get(), RSA_PKCS1_PADDING);
         if (ret == -1)
         {
             result = RetEncryptError;

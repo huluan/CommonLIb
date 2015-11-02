@@ -67,14 +67,14 @@ public:
         m_isInit(false),
         m_isUseEncrypt(false),
         m_isUseDecrypt(false),
-        m_rsaErrorNo(0),
         m_rsaPublic(nullptr),
-        m_rsaPrivate(nullptr){}
+        m_rsaPrivate(nullptr),
+        m_rsaErrorNo(0){}
 
     EResultInfo SetPublicKeyFromFile(const std::string &publicKeyFile);
-    EResultInfo SetPublicKeyFromStr(const std::string &publicKeyStr);
+    EResultInfo SetPublicKeyFromStr(std::string &publicKeyStr);
 
-    EResultInfo SetPrivateKeyFromFile(const std::string &privateKeyFile,std::string &password = "");
+    EResultInfo SetPrivateKeyFromFile(const std::string &privateKeyFile, std::string password = "");
     EResultInfo SetPrivateKeyFromStr(const std::string &privateKeyFile);
 
     EResultInfo Decrypt(const unsigned char *inData, const unsigned int inDataLen, 
@@ -85,13 +85,13 @@ public:
     size_t GetPubRsaSize() const 
     { 
         if (NULL != m_rsaPublic)
-            return RSA_size(m_rsaPublic); 
+            return RSA_size(m_rsaPublic.get()); 
         return 0;
     }
     size_t GetPriRsaSize() const 
     {
         if (NULL != m_rsaPrivate)
-            return RSA_size(m_rsaPrivate); 
+            return RSA_size(m_rsaPrivate.get()); 
         return 0;
     }
     
