@@ -4,13 +4,12 @@
 
 using namespace SOpenssl;
 
-static long *lockCount;
 static pthread_mutex_t *lockCs;
 auto BIODeleter = [] (BIO *bio) { if (nullptr == bio) BIO_free(bio); };
 auto RSADeleter = [] (RSA *rsa) { if (nullptr == rsa) RSA_free(rsa); };
 
 // 向openssl提供当前线程号
-unsigned long SOpenssl::EcosThreadIdCallback()
+unsigned long SOpenssl::ThreadIdCallback()
 {
     pthread_t ret;
     ret = pthread_self();
@@ -18,12 +17,11 @@ unsigned long SOpenssl::EcosThreadIdCallback()
 }
 
 // locking回调函数，由openssl库回调，向openssl提供lock/unlock
-void SOpenssl::EcosLockingCallback(int mode, int type, const char *file, int line)
+void SOpenssl::LockingCallback(int mode, int type, const char *file, int line)
 {
     if (mode & CRYPTO_LOCK)
     {
         pthread_mutex_lock(&(lockCs[type]));
-        lockCount[type]++;
     }
     else
     {
@@ -35,16 +33,14 @@ void SOpenssl::EcosLockingCallback(int mode, int type, const char *file, int lin
 void SOpenssl::ThreadSafetySetup()
 {
     lockCs = (pthread_mutex_t *)OPENSSL_malloc(CRYPTO_num_locks() * sizeof(pthread_mutex_t));
-    lockCount = (long *)OPENSSL_malloc(CRYPTO_num_locks() * sizeof(long));
 
     for (int i = 0; i < CRYPTO_num_locks(); ++i)
     {
-        lockCount[i] = 0;
         pthread_mutex_init(&(lockCs[i]), nullptr);
     }
 
-    CRYPTO_set_id_callback(EcosThreadIdCallback);
-    CRYPTO_set_locking_callback(EcosLockingCallback);
+    CRYPTO_set_id_callback(ThreadIdCallback);
+    CRYPTO_set_locking_callback(LockingCallback);
 }
 
 // 多线程保护反初始化
@@ -60,8 +56,6 @@ void SOpenssl::ThreadSafetyCleanup()
     
     OPENSSL_free(lockCs);
     lockCs = nullptr;
-    OPENSSL_free(lockCount);
-    lockCount = nullptr;
 }
 
 RsaEncryptor::EResultInfo RsaEncryptor::Init()

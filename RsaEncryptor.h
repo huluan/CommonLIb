@@ -37,8 +37,8 @@ namespace SOpenssl
 {
 
 // 声明两个回调函数
-void EcosLockingCallback(int mode, int type, const char *file, int line);
-unsigned long EcosThreadIdCallback();
+void LockingCallback(int mode, int type, const char *file, int line);
+unsigned long ThreadIdCallback();
 // 多线程保护初始化
 void ThreadSafetySetup();
 // 多线程保护反初始化
