@@ -59,6 +59,7 @@ public:
         RetDecryptError = 8,                // 解密错误
         RetNoInit = 9,                      // 没有初始化
         RetAlreadyInit = 10,                // 已经初始化
+        RetBuffSizeMore = 11,               // 明文的长度过长
     };
 
 public:

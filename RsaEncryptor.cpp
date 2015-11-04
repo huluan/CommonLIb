@@ -22,17 +22,18 @@ void SOpenssl::LockingCallback(int mode, int type, const char *file, int line)
 {
     if (mode & CRYPTO_LOCK)
     {
-        gLocks[type].lock();
+        (*gLocks)[type].lock();
     }
     else
     {
-        gLocks[type].unlock();
+        (*gLocks)[type].unlock();
     }
 }
 
 // 多线程保护初始化
 void SOpenssl::ThreadSafetySetup()
 {
+    gLocks.reset(new std::vector<std::mutex>(CRYPTO_num_locks()));
     CRYPTO_set_id_callback(ThreadIdCallback);
     CRYPTO_set_locking_callback(LockingCallback);
 }
@@ -42,6 +43,7 @@ void SOpenssl::ThreadSafetyCleanup()
 {
     CRYPTO_set_id_callback(nullptr);
     CRYPTO_set_locking_callback(nullptr);
+    gLocks.reset();
 }
 
 RsaEncryptor::EResultInfo RsaEncryptor::Init()
@@ -229,9 +231,9 @@ RsaEncryptor::EResultInfo RsaEncryptor::Encrypt(const unsigned char *inData, con
             result = RetNoInit;
             break;
         }
-        if (outDataLen < RSA_size(m_rsaPublic.get()))
+        if (inDataLen > RSA_size(m_rsaPublic.get()))
         {
-            result = RetBuffSizeLess;
+            result = RetBuffSizeMore;
             break;
         }
         // 加密
