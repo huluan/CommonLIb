@@ -1,19 +1,20 @@
 #include "RsaEncryptor.h"
 #include <assert.h>
-#include <pthread.h>
+#include <mutex>
+#include <thread>
+#include <vector>
+#include <memory>
 
 using namespace SOpenssl;
 
-static pthread_mutex_t *lockCs;
+std::shared_ptr< std::vector<std::mutex> > gLocks;
 auto BIODeleter = [] (BIO *bio) { if (nullptr == bio) BIO_free(bio); };
 auto RSADeleter = [] (RSA *rsa) { if (nullptr == rsa) RSA_free(rsa); };
 
 // 向openssl提供当前线程号
 unsigned long SOpenssl::ThreadIdCallback()
 {
-    pthread_t ret;
-    ret = pthread_self();
-    return ret;
+    std::this_thread::get_id();
 }
 
 // locking回调函数，由openssl库回调，向openssl提供lock/unlock
@@ -21,24 +22,17 @@ void SOpenssl::LockingCallback(int mode, int type, const char *file, int line)
 {
     if (mode & CRYPTO_LOCK)
     {
-        pthread_mutex_lock(&(lockCs[type]));
+        gLocks[type].lock();
     }
     else
     {
-        pthread_mutex_unlock(&(lockCs[type]));
+        gLocks[type].unlock();
     }
 }
 
 // 多线程保护初始化
 void SOpenssl::ThreadSafetySetup()
 {
-    lockCs = (pthread_mutex_t *)OPENSSL_malloc(CRYPTO_num_locks() * sizeof(pthread_mutex_t));
-
-    for (int i = 0; i < CRYPTO_num_locks(); ++i)
-    {
-        pthread_mutex_init(&(lockCs[i]), nullptr);
-    }
-
     CRYPTO_set_id_callback(ThreadIdCallback);
     CRYPTO_set_locking_callback(LockingCallback);
 }
@@ -48,14 +42,6 @@ void SOpenssl::ThreadSafetyCleanup()
 {
     CRYPTO_set_id_callback(nullptr);
     CRYPTO_set_locking_callback(nullptr);
-
-    for (int i = 0; i < CRYPTO_num_locks(); ++i)
-    {
-        pthread_mutex_destroy(&(lockCs[i]));
-    }
-    
-    OPENSSL_free(lockCs);
-    lockCs = nullptr;
 }
 
 RsaEncryptor::EResultInfo RsaEncryptor::Init()
@@ -66,7 +52,8 @@ RsaEncryptor::EResultInfo RsaEncryptor::Init()
 
     ERR_load_ERR_strings();
     ERR_load_crypto_strings();
-    
+
+    ThreadSafetySetup();
     if (RetSuccess == result)
         m_isInit = true;
     return result;
@@ -193,6 +180,7 @@ void RsaEncryptor::Destory()
 {
     CRYPTO_cleanup_all_ex_data();
     EVP_cleanup();
+    ThreadSafetyCleanup();
 }
 
 RsaEncryptor::~RsaEncryptor()
@@ -216,18 +204,13 @@ RsaEncryptor::EResultInfo RsaEncryptor::Decrypt(const unsigned char *inData, con
             result = RetBuffSizeLess;
             break;
         }
-        // 加密
+        // 解密
         int ret = RSA_private_decrypt(inDataLen, inData, outData,
                 m_rsaPrivate.get(), RSA_PKCS1_PADDING);
         if (ret == -1)
         {
             result = RetDecryptError;
             m_rsaErrorNo = ERR_get_error();
-            /*
-            std::vector<char> errVect(1024, 0);
-            ERR_error_string(ERR_get_error(), errVect.data());
-            std::cout << errVect.data() << std::endl;
-            */
             break;
         }
         outDataLen = ret;

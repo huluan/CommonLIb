@@ -6,7 +6,6 @@
 #include <assert.h>
 #include <string>
 #include <iostream>
-#include <vector>
 #include <memory>
 
 #include <openssl/rsa.h>
