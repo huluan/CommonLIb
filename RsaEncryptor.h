@@ -70,6 +70,8 @@ public:
         m_rsaPublic(nullptr),
         m_rsaPrivate(nullptr),
         m_rsaErrorNo(0){}
+    RsaEncryptor(const RsaEncryptor &) = delete;
+    RsaEncryptor &operator=(const RsaEncryptor &) = delete;
 
     EResultInfo SetPublicKeyFromFile(const std::string &publicKeyFile);
     EResultInfo SetPublicKeyFromStr(std::string &publicKeyStr);
