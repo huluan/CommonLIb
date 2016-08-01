@@ -8,8 +8,8 @@
 using namespace SOpenssl;
 
 std::shared_ptr< std::vector<std::mutex> > gLocks;
-auto BIODeleter = [] (BIO *bio) { if (nullptr == bio) BIO_free(bio); };
-auto RSADeleter = [] (RSA *rsa) { if (nullptr == rsa) RSA_free(rsa); };
+auto BIODeleter = [] (BIO *bio) { if (nullptr != bio) BIO_free(bio); };
+auto RSADeleter = [] (RSA *rsa) { if (nullptr != rsa) RSA_free(rsa); };
 
 // 向openssl提供当前线程号
 unsigned long SOpenssl::ThreadIdCallback()

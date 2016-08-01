@@ -13,25 +13,6 @@
 #include <openssl/err.h>
 
 
-/**
- * 使用流程说明
- * 1. 安装openssl库
- * 2. 使用下面命令生成使用des加密的rsa密钥文件:
- *    eg: openssl genrsa -des3 -out cipherPrv.key 1024 (cipherPrv.key名字由你指定)
- * 3. 使用下面命令生成rsa公钥文件
- *    eg: openssl rsa -in cipherPrv.key -pubout -out cipherPub.key (cipherPub.key名字由你指定)
- * 4. 初始化一个RsaEncryptor对象，传入公钥文件路径名，密钥文件路径名，密钥文件密码
- *    如果仅使用加密，只传入公钥文件路径名就行
- *    eg: RsaEncryptor rsa("cipherPub.key", "cipherPrv.key", "12345")
- * 5. 初始化rsa
- *    eg: EResultInfo result = rsa.init(); 根据EResultInfo枚举判断是否成功或者失败的原因
- * 6. 调用Encrypt进行加密
- *    密文缓冲区的长度为GetPubRsaSize() + 1
- *    EResultInfo result = sa.Encrypt(明文缓冲区，明文长度， 密文接收缓冲区， 密文缓冲区长度)
- * 7. 调用Decrypt进行解密
- *    明文缓冲区的长度为GetPriRsaSize() + 1
- *    EResultInfo result = rsa.Decrypt(密文缓冲区，密文长度， 明文接收缓冲区， 明文缓冲区长度)
- **/
 namespace SOpenssl
 {
 
